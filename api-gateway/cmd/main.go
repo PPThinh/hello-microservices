@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"log"
 	"net/http"
@@ -13,14 +14,22 @@ import (
 )
 
 func main() {
-	helloConn, err := grpc.Dial("[::]:50051", grpc.WithInsecure())
+	//helloConn, err := grpc.Dial("[::]:50051", grpc.WithInsecure())
+	helloConn, err := grpc.NewClient(
+		"[::]:50051",
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // thay grpc.WithInsecure()
+	)
 	if err != nil {
 		log.Fatalf("failed to dial hello: %v", err)
 	}
 	defer helloConn.Close()
 	helloClient := hellopb.NewHelloServiceClient(helloConn)
 
-	userConn, err := grpc.Dial("[::]:50052", grpc.WithInsecure())
+	//userConn, err := grpc.Dial("[::]:50052", grpc.WithInsecure())
+	userConn, err := grpc.NewClient(
+		"[::]:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		log.Fatalf("failed to dial user: %v", err)
 	}
@@ -39,12 +48,14 @@ func main() {
 			return
 		}
 
+		// call hello
 		helloResp, err := helloClient.GetHello(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		// call user
 		userReq := &userpb.UserRequest{Id: uint32(id)}
 		userResp, err := userClient.GetUser(context.Background(), userReq)
 		if err != nil {
